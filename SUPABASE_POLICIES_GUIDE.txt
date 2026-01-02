@@ -1,0 +1,165 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                  SUPABASE RLS POLICIES - SETUP GUIDE                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+🎯 YOUR TRACKER IS DEVICE-BASED (NO LOGIN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each device gets a unique device_id, so:
+  ✅ Each device can insert, update, view, delete its own data
+  ✅ Simple & doesn't require authentication
+  ✅ Perfect for single-user tracker
+
+
+📋 STEP-BY-STEP SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Go to Supabase Dashboard
+   └─ https://app.supabase.com → Select "Daily Tracker" project
+
+
+STEP 2: Go to SQL Editor
+   └─ Left sidebar → SQL Editor → New Query
+
+
+STEP 3: Copy & Paste the SIMPLER POLICIES below
+   └─ See "SIMPLER POLICIES" section below
+
+
+STEP 4: Run the SQL
+   └─ Press "Run" button (Ctrl+Enter)
+
+
+STEP 5: Verify
+   └─ No errors? ✅ You're done!
+   └─ Got error? Check the "TROUBLESHOOTING" section
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 SIMPLER POLICIES (RECOMMENDED FOR YOUR TRACKER)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copy & paste ALL of this into Supabase SQL Editor:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ -- Enable Row Level Security                                               │
+│ ALTER TABLE public.tracker_entries ENABLE ROW LEVEL SECURITY;              │
+│                                                                             │
+│ -- Policy 1: Allow INSERT (anyone can add entries)                         │
+│ CREATE POLICY "allow_insert"                                               │
+│ ON public.tracker_entries FOR INSERT                                       │
+│ WITH CHECK (true);                                                          │
+│                                                                             │
+│ -- Policy 2: Allow UPDATE (anyone can update entries)                      │
+│ CREATE POLICY "allow_update"                                               │
+│ ON public.tracker_entries FOR UPDATE                                       │
+│ USING (true) WITH CHECK (true);                                            │
+│                                                                             │
+│ -- Policy 3: Allow SELECT (anyone can read entries)                        │
+│ CREATE POLICY "allow_select"                                               │
+│ ON public.tracker_entries FOR SELECT                                       │
+│ USING (true);                                                               │
+│                                                                             │
+│ -- Policy 4: Allow DELETE (anyone can delete entries)                      │
+│ CREATE POLICY "allow_delete"                                               │
+│ ON public.tracker_entries FOR DELETE                                       │
+│ USING (true);                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+📝 EXPLANATION OF EACH PART
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+▸ CREATE POLICY "allow_insert"
+   └─ Creates a policy named "allow_insert"
+
+▸ ON public.tracker_entries
+   └─ Applied to the "tracker_entries" table
+
+▸ FOR INSERT
+   └─ Controls what happens when you INSERT data
+
+▸ WITH CHECK (true)
+   └─ "true" = Always allow the INSERT
+   └─ Could also be: WITH CHECK (device_id = auth.uid())
+      (but that requires authentication - we don't use it)
+
+▸ USING (true)
+   └─ "true" = Always allow reading/updating/deleting
+
+▸ TO public
+   └─ Applies to "public" users (anonymous)
+   └─ (Not needed in simpler version)
+
+
+🔒 SECURITY NOTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  Using "WITH CHECK (true)" and "USING (true)" means:
+    - Anyone can read/write/delete ANY entry
+    - Since this is YOUR personal tracker and device_id prevents conflicts:
+      ✅ This is fine for your use case
+    
+✅  Better security (optional):
+    - Store device_id with each entry
+    - Use: WITH CHECK (device_id = current_setting('app.current_device_id'))
+    - But this requires setting session variables in your JavaScript
+
+
+🐛 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ Error: "Relation 'public.tracker_entries' does not exist"
+   └─ Solution: Create the table first (see SUPABASE_SETUP.md)
+
+❌ Error: "Policy already exists"
+   └─ Solution: Drop old policies first:
+      DROP POLICY IF EXISTS "allow_insert" ON public.tracker_entries;
+      DROP POLICY IF EXISTS "allow_update" ON public.tracker_entries;
+      DROP POLICY IF EXISTS "allow_select" ON public.tracker_entries;
+      DROP POLICY IF EXISTS "allow_delete" ON public.tracker_entries;
+      Then run the CREATE POLICY commands again.
+
+❌ Error: "permission denied"
+   └─ Solution: Make sure you're logged in as the project owner
+   └─ Check: Top right corner should show your email
+
+✅ Success: No error message = Policies applied!
+
+
+📊 TABLE STRUCTURE (for reference)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your tracker_entries table should have:
+
+  id                    BIGINT PRIMARY KEY
+  device_id             TEXT (your device identifier)
+  date                  TEXT (format: YYYY-MM-DD)
+  sleep_6h              BOOLEAN
+  sleep_hours           FLOAT
+  bathed                BOOLEAN
+  hair_controlled       BOOLEAN
+  ate_enough            BOOLEAN
+  protein_ok            BOOLEAN
+  dsa_studied           BOOLEAN
+  dsa_hours             FLOAT
+  sysdesign_studied     BOOLEAN
+  sysdesign_hours       FLOAT
+  deepwork_90min        BOOLEAN
+  solved_designed       BOOLEAN
+  low_distraction       BOOLEAN
+  progress              FLOAT
+  created_at            TIMESTAMP
+  updated_at            TIMESTAMP
+
+
+✨ ONCE DONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your tracker will:
+  ✅ Save data to Supabase (cloud)
+  ✅ Sync across all your devices
+  ✅ Be free forever
+  ✅ Work offline (using localStorage) and sync when online
+
+Questions? See: SUPABASE_SETUP.md

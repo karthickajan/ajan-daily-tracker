@@ -1,0 +1,100 @@
+# 🎯 Ajan Daily Tracker - Supabase Integration Guide
+
+Your tracker is now connected to **Supabase** for cloud storage! 
+
+## ⚡ Quick Start (3 steps)
+
+### Step 1: Create the Database Table
+
+1. Go to: https://app.supabase.com
+2. Select your **Daily Tracker** project
+3. Open **SQL Editor** (left sidebar)
+4. Click **New Query**
+5. Paste this SQL and click **Run**:
+
+```sql
+CREATE TABLE tracker_entries (
+  id BIGSERIAL PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  sleep_6h BOOLEAN DEFAULT FALSE,
+  sleep_hours DECIMAL DEFAULT 0,
+  bathed BOOLEAN DEFAULT FALSE,
+  hair_controlled BOOLEAN DEFAULT FALSE,
+  ate_enough BOOLEAN DEFAULT FALSE,
+  protein_ok BOOLEAN DEFAULT FALSE,
+  dsa_studied BOOLEAN DEFAULT FALSE,
+  dsa_hours DECIMAL DEFAULT 0,
+  sysdesign_studied BOOLEAN DEFAULT FALSE,
+  sysdesign_hours DECIMAL DEFAULT 0,
+  deepwork_90min BOOLEAN DEFAULT FALSE,
+  solved_designed BOOLEAN DEFAULT FALSE,
+  low_distraction BOOLEAN DEFAULT FALSE,
+  progress DECIMAL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(device_id, date)
+);
+
+CREATE INDEX idx_device_date ON tracker_entries(device_id, date);
+```
+
+### Step 2: Enable Row Level Security (RLS)
+
+1. Go to **Authentication** → **Policies**
+2. Find `tracker_entries` table
+3. Click **New Policy** and select:
+   - ✅ Enable read access for all users
+4. Repeat and select:
+   - ✅ Enable insert access for all users
+5. Repeat and select:
+   - ✅ Enable update access for all users
+
+### Step 3: Done! Start Using 🎉
+
+```bash
+python daily_tracker_web.py
+```
+
+Then open: **http://localhost:5000**
+
+---
+
+## What You Get
+
+✅ **Cloud Storage** - Data saved to Supabase (always free tier)
+✅ **Multi-Device Sync** - Same data on phone, laptop, tablet
+✅ **Offline Support** - Works offline, syncs when online
+✅ **No Time Limit** - Free tier forever (500K reads/writes/month)
+✅ **Your Data** - You own it all, can export anytime
+
+---
+
+## How It Works
+
+1. Browser generates a unique **Device ID** (stored locally)
+2. All your entries are linked to that Device ID
+3. When you save, data goes to Supabase ☁️
+4. On any device with same ID, you see all your data
+5. If offline, saves locally → syncs when back online
+
+---
+
+## Troubleshooting
+
+**Data not saving?**
+- Check browser console (F12 → Console tab)
+- Verify Supabase project is active
+- Make sure `tracker_entries` table exists
+
+**Want to use on another device?**
+- Copy the Device ID from your current device
+- Paste it in browser console on new device: `localStorage.setItem('ajanDeviceId', 'your_device_id')`
+- Refresh page
+
+**Export your data?**
+- Click **📤 Export Data** button to download JSON
+
+---
+
+**You're all set! Start tracking your daily habits! 🚀**

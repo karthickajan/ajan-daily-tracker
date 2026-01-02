@@ -1,0 +1,143 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║          🎯 AJAN DAILY TRACKER - QUICK START GUIDE 🎯              ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+█████████████████████████████████████████████████████████████████████
+
+STEP 1️⃣  - CREATE DATABASE TABLE (2 minutes)
+
+1. Go to: https://app.supabase.com
+2. Click your "Daily Tracker" project
+3. Click "SQL Editor" on the left
+4. Click "New Query"
+5. Copy & Paste THIS SQL:
+
+─────────────────────────────────────────────────────────────────────
+
+CREATE TABLE tracker_entries (
+  id BIGSERIAL PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  sleep_6h BOOLEAN DEFAULT FALSE,
+  sleep_hours DECIMAL DEFAULT 0,
+  bathed BOOLEAN DEFAULT FALSE,
+  hair_controlled BOOLEAN DEFAULT FALSE,
+  ate_enough BOOLEAN DEFAULT FALSE,
+  protein_ok BOOLEAN DEFAULT FALSE,
+  dsa_studied BOOLEAN DEFAULT FALSE,
+  dsa_hours DECIMAL DEFAULT 0,
+  sysdesign_studied BOOLEAN DEFAULT FALSE,
+  sysdesign_hours DECIMAL DEFAULT 0,
+  deepwork_90min BOOLEAN DEFAULT FALSE,
+  solved_designed BOOLEAN DEFAULT FALSE,
+  low_distraction BOOLEAN DEFAULT FALSE,
+  progress DECIMAL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(device_id, date)
+);
+
+CREATE INDEX idx_device_date ON tracker_entries(device_id, date);
+
+─────────────────────────────────────────────────────────────────────
+
+6. Click "Run" (or press Ctrl+Enter)
+7. ✅ Done! You should see "Success"
+
+█████████████████████████████████████████████████████████████████████
+
+STEP 2️⃣  - ENABLE PERMISSIONS (2 minutes)
+
+1. Go to "Authentication" → "Policies" (left sidebar)
+2. Find the "tracker_entries" table
+3. Click "New Policy"
+4. Select "Enable read access for all users"
+5. Click "Review" then "Save policy"
+6. Repeat steps 3-5 for:
+   - "Enable insert access for all users"
+   - "Enable update access for all users"
+
+✅ Done! Permissions are set up.
+
+█████████████████████████████████████████████████████████████████████
+
+STEP 3️⃣  - START YOUR TRACKER (1 minute)
+
+Open Terminal and run:
+
+cd "/Users/karthicks7/Desktop/Ajan Daily Tracker"
+python daily_tracker_web.py
+
+You'll see:
+    ╔═══════════════════════════════════════════════════════════╗
+    ║   ✨ Ajan Daily Tracker - Beautiful UI Edition ✨         ║
+    ║                                                           ║
+    ║   Server running at: http://localhost:5000               ║
+    ║                                                           ║
+    ║   Open the URL in your browser to start tracking!         ║
+    ║   Press Ctrl+C to stop the server.                        ║
+    ║                                                           ║
+    ╚═══════════════════════════════════════════════════════════╝
+
+✅ Done! Open: http://localhost:5000 in your browser
+
+█████████████████████████████████████████████████████████████████████
+
+🎉 THAT'S IT! YOU'RE READY TO TRACK! 🎉
+
+Your tracker now has:
+✅ Cloud storage (Supabase - always free)
+✅ Multi-device sync
+✅ Offline support
+✅ Beautiful dark theme
+✅ Real-time stats
+✅ 28-day heatmap
+
+█████████████████████████████████████████████████████████████████████
+
+📝 WHAT YOU TRACK
+
+💪 Health & Wellness
+  • Sleep ≥ 6 hours
+  • Bathed Today
+  • Hair Controlled
+  • Ate Enough
+  • Protein Intake OK
+
+📚 Learning & Growth
+  • DSA Studied
+  • System Design Studied
+  • Solved Problem / Designed
+
+⚡ Productivity
+  • Deep Work ≥ 90 min
+  • Low Distraction Day
+
+█████████████████████████████████████████████████████████████████████
+
+💡 TIPS
+
+Q: Data not showing?
+A: Check browser console (F12 → Console) for errors
+
+Q: Want same data on another device?
+A: Copy Device ID from browser console:
+   localStorage.getItem('ajanDeviceId')
+   Then paste on new device:
+   localStorage.setItem('ajanDeviceId', 'your_id_here')
+
+Q: Export my data?
+A: Click "📤 Export Data" button in the app
+
+Q: See data in Supabase?
+A: Go to Table Editor → tracker_entries
+
+█████████████████████████████████████████████████████████████████████
+
+Happy Tracking! 🚀
+
+Questions? Check README.md or SETUP_INSTRUCTIONS.txt
+
+█████████████████████████████████████████████████████████████████████

@@ -1,0 +1,26 @@
+# Environment
+.venv/
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Local data (don't commit to GitHub)
+tracker_data.json
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive
+.env
+*.key
+secrets.json
