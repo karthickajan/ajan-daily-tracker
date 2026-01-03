@@ -814,63 +814,25 @@ HTML_TEMPLATE = '''
                 progress: todayEntry.progress
             };
             
-            // First, check if entry exists for today
-            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?date=eq.${today}`, {
-                method: 'GET',
+            // Use UPSERT: Insert if new, Update if exists (based on date)
+            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': SUPABASE_API_KEY,
-                    'Authorization': `Bearer ${SUPABASE_API_KEY}`
-                }
+                    'Authorization': `Bearer ${SUPABASE_API_KEY}`,
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(existingData => {
-                if (existingData && existingData.length > 0) {
-                    // UPDATE existing entry
-                    console.log('Updating existing entry for', today);
-                    const entryId = existingData[0].id;
-                    
-                    fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?id=eq.${entryId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'apikey': SUPABASE_API_KEY,
-                            'Authorization': `Bearer ${SUPABASE_API_KEY}`
-                        },
-                        body: JSON.stringify(data)
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            console.log('✅ Updated in Supabase');
-                        } else {
-                            console.error('Failed to update in Supabase');
-                        }
-                    })
-                    .catch(e => console.error('Update error:', e));
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Synced to Supabase');
                 } else {
-                    // INSERT new entry
-                    console.log('Creating new entry for', today);
-                    
-                    fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'apikey': SUPABASE_API_KEY,
-                            'Authorization': `Bearer ${SUPABASE_API_KEY}`
-                        },
-                        body: JSON.stringify(data)
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            console.log('✅ Saved to Supabase');
-                        } else {
-                            console.error('Failed to save to Supabase');
-                        }
-                    })
-                    .catch(e => console.error('Insert error:', e));
+                    response.text().then(text => console.error('Supabase error:', text));
                 }
             })
-            .catch(e => console.error('Error checking existing entry:', e));
+            .catch(e => console.error('Sync error:', e));
         }
 
         function calculateProgress() {
