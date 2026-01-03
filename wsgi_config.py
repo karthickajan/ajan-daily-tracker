@@ -720,6 +720,9 @@ HTML_TEMPLATE = '''
                 trackerData = JSON.parse(saved);
             }
             
+            // Fetch all data from Supabase for this device
+            fetchFromSupabase();
+            
             // Load today's entry if exists
             const today = new Date().toISOString().split('T')[0];
             const todayEntry = trackerData.entries.find(e => e.date === today);
@@ -738,6 +741,46 @@ HTML_TEMPLATE = '''
             updateProgress();
             updateStats();
             renderHistory();
+        }
+
+        function fetchFromSupabase() {
+            // Fetch all entries from Supabase for this device
+            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?device_id=eq.${userId}&order=date.desc`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_API_KEY,
+                    'Authorization': `Bearer ${SUPABASE_API_KEY}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    // Clear existing entries and replace with Supabase data
+                    trackerData.entries = data.map(row => ({
+                        date: row.date,
+                        sleep_6h: row.sleep_6h,
+                        sleep_hours: row.sleep_hours,
+                        bathed: row.bathed,
+                        hair_controlled: row.hair_controlled,
+                        ate_enough: row.ate_enough,
+                        protein_ok: row.protein_ok,
+                        dsa_studied: row.dsa_studied,
+                        dsa_hours: row.dsa_hours,
+                        sysdesign_studied: row.sysdesign_studied,
+                        sysdesign_hours: row.sysdesign_hours,
+                        deepwork_90min: row.deepwork_90min,
+                        solved_designed: row.solved_designed,
+                        low_distraction: row.low_distraction,
+                        progress: row.progress
+                    }));
+                    // Save synced data to localStorage
+                    localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
+                }
+            })
+            .catch(e => {
+                console.log('Failed to fetch from Supabase, using local data');
+            });
         }
 
         function saveData() {
