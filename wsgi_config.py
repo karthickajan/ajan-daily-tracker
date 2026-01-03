@@ -699,15 +699,10 @@ HTML_TEMPLATE = '''
         }
 
         function initializeApp() {
-            // Generate or retrieve unique device ID
-            let deviceId = localStorage.getItem('ajanDeviceId');
-            if (!deviceId) {
-                deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('ajanDeviceId', deviceId);
-            }
-            userId = deviceId;
+            // Use fixed device ID for this personal tracker
+            userId = 'ajan_user';
             
-            // Load from localStorage
+            // Load from localStorage and Supabase
             loadData();
         }
 
@@ -742,17 +737,10 @@ HTML_TEMPLATE = '''
 
         function fetchFromSupabase() {
             return new Promise((resolve) => {
-                // Make sure userId is set
-                if (!userId) {
-                    console.log('User ID not set yet');
-                    resolve();
-                    return;
-                }
+                console.log('Fetching all entries from Supabase');
                 
-                console.log('Fetching from Supabase for device:', userId);
-                
-                // Fetch all entries from Supabase for this device
-                fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?device_id=eq.${userId}&order=date.desc`, {
+                // Fetch ALL entries from Supabase (no device_id filter)
+                fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?order=date.desc`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -765,7 +753,7 @@ HTML_TEMPLATE = '''
                     console.log('Supabase response:', data);
                     if (data && data.length > 0) {
                         console.log('Found', data.length, 'entries from Supabase');
-                        // Clear existing entries and replace with Supabase data
+                        // Replace all entries with Supabase data
                         trackerData.entries = data.map(row => ({
                             date: row.date,
                             sleep_6h: row.sleep_6h,
@@ -785,9 +773,9 @@ HTML_TEMPLATE = '''
                         }));
                         // Save synced data to localStorage
                         localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
-                        console.log('Synced', trackerData.entries.length, 'entries from Supabase to localStorage');
+                        console.log('✅ Synced', trackerData.entries.length, 'entries to localStorage');
                     } else {
-                        console.log('No entries found in Supabase for this device');
+                        console.log('No entries found in Supabase');
                     }
                     resolve();
                 })
@@ -813,25 +801,80 @@ HTML_TEMPLATE = '''
             
             // Prepare data for Supabase
             const data = {
-                device_id: userId,
                 date: today,
-                ...todayEntry
+                sleep_6h: todayEntry.sleep_6h,
+                sleep_hours: todayEntry.sleep_hours,
+                bathed: todayEntry.bathed,
+                hair_controlled: todayEntry.hair_controlled,
+                ate_enough: todayEntry.ate_enough,
+                protein_ok: todayEntry.protein_ok,
+                dsa_studied: todayEntry.dsa_studied,
+                dsa_hours: todayEntry.dsa_hours,
+                sysdesign_studied: todayEntry.sysdesign_studied,
+                sysdesign_hours: todayEntry.sysdesign_hours,
+                deepwork_90min: todayEntry.deepwork_90min,
+                solved_designed: todayEntry.solved_designed,
+                low_distraction: todayEntry.low_distraction,
+                progress: todayEntry.progress
             };
             
-            // Send to Supabase
-            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
-                method: 'POST',
+            // First, check if entry exists for today
+            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?date=eq.${today}`, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': SUPABASE_API_KEY,
                     'Authorization': `Bearer ${SUPABASE_API_KEY}`
-                },
-                body: JSON.stringify(data)
+                }
             })
-            .catch(e => {
-                // Silently fail - data is saved locally anyway
-                console.log('Cloud sync attempted');
-            });
+            .then(response => response.json())
+            .then(existingData => {
+                if (existingData && existingData.length > 0) {
+                    // UPDATE existing entry
+                    console.log('Updating existing entry for', today);
+                    const entryId = existingData[0].id;
+                    
+                    fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?id=eq.${entryId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': SUPABASE_API_KEY,
+                            'Authorization': `Bearer ${SUPABASE_API_KEY}`
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('✅ Updated in Supabase');
+                        } else {
+                            console.error('Failed to update in Supabase');
+                        }
+                    })
+                    .catch(e => console.error('Update error:', e));
+                } else {
+                    // INSERT new entry
+                    console.log('Creating new entry for', today);
+                    
+                    fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': SUPABASE_API_KEY,
+                            'Authorization': `Bearer ${SUPABASE_API_KEY}`
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('✅ Saved to Supabase');
+                        } else {
+                            console.error('Failed to save to Supabase');
+                        }
+                    })
+                    .catch(e => console.error('Insert error:', e));
+                }
+            })
+            .catch(e => console.error('Error checking existing entry:', e));
         }
 
         function calculateProgress() {
