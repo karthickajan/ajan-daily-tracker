@@ -588,6 +588,7 @@ HTML_TEMPLATE = '''
         @media (max-width: 600px) {
             .container {
                 padding: 1rem;
+                padding-bottom: 2rem;
             }
             
             .header-left h1 {
@@ -605,6 +606,25 @@ HTML_TEMPLATE = '''
             .header-right {
                 width: 100%;
                 justify-content: space-between;
+            }
+
+            /* Mobile: date on left, sync on right */
+            .header-right .date-badge {
+                order: -1;
+            }
+
+            .header-right .sync-btn {
+                order: 1;
+            }
+
+            /* Remove sticky on mobile */
+            .stats-panel {
+                position: static;
+            }
+
+            /* Ensure cards have proper spacing */
+            .card {
+                margin-bottom: 1rem;
             }
         }
     </style>
