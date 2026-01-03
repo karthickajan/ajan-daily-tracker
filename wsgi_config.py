@@ -674,7 +674,6 @@ HTML_TEMPLATE = '''
         
         // Data storage
         let trackerData = {entries: []};
-        let userId = null;
         let isLoading = true;
         
         const toggleKeys = ['sleep_6h', 'bathed', 'hair_controlled', 'ate_enough', 'protein_ok', 
@@ -697,12 +696,9 @@ HTML_TEMPLATE = '''
             document.getElementById('current-date').textContent = 
                 `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`;
         }
-
+        
         function initializeApp() {
-            // Use fixed device ID for this personal tracker
-            userId = 'ajan_user';
-            
-            // Load from localStorage and Supabase
+            // Load data from localStorage and Supabase
             loadData();
         }
 
