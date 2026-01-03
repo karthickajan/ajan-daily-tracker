@@ -670,7 +670,7 @@ HTML_TEMPLATE = '''
     <script>
         // Supabase Configuration
         const SUPABASE_URL = 'https://suxszrvczmdfajekqyrw.supabase.co';
-        const SUPABASE_API_KEY = 'sb_publishable_PAqRM1mxu_St436Be0NwVw_Aj7MW-kp';
+        const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eHN6cnZjem1kZmFqZWtxeXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczODAwMDYsImV4cCI6MjA4Mjk1NjAwNn0.hMQNTaiPH8MpXNunj0GsgCAc51Z82u-oH9v-X-UVBmc';
         
         // Data storage
         let trackerData = {entries: []};
