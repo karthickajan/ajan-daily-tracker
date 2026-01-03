@@ -822,11 +822,13 @@ HTML_TEMPLATE = '''
                 deepwork_90min: todayEntry.deepwork_90min,
                 solved_designed: todayEntry.solved_designed,
                 low_distraction: todayEntry.low_distraction,
-                progress: todayEntry.progress
+                progress: todayEntry.progress || 0
             };
             
+            console.log('📤 Sending to Supabase:', data);
+            
             // Use UPSERT: Insert if new, Update if exists (based on date)
-            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
+            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?on_conflict=date`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -840,10 +842,10 @@ HTML_TEMPLATE = '''
                 if (response.ok) {
                     console.log('✅ Synced to Supabase');
                 } else {
-                    response.text().then(text => console.error('Supabase error:', text));
+                    response.text().then(text => console.error('❌ Supabase error:', text));
                 }
             })
-            .catch(e => console.error('Sync error:', e));
+            .catch(e => console.error('❌ Sync error:', e));
         }
 
         function calculateProgress() {
