@@ -666,7 +666,7 @@ HTML_TEMPLATE = '''
                     <div class="toggle-item">
                         <span class="toggle-label">Sleep ≥ 6 hours</span>
                         <div class="toggle-right">
-                            <input type="number" class="hour-input" id="sleep_hours" min="0" max="24" step="0.5" value="0">
+                            <input type="number" class="hour-input" id="sleep_hours" min="0" max="24" step="0.5" value="0" autocomplete="off">
                             <span class="hour-label">hrs</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="sleep_6h" onchange="updateProgress()">
@@ -723,7 +723,7 @@ HTML_TEMPLATE = '''
                     <div class="toggle-item">
                         <span class="toggle-label">DSA Studied</span>
                         <div class="toggle-right">
-                            <input type="number" class="hour-input" id="dsa_hours" min="0" max="24" step="0.5" value="0">
+                            <input type="number" class="hour-input" id="dsa_hours" min="0" max="24" step="0.5" value="0" autocomplete="off">
                             <span class="hour-label">hrs</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="dsa_studied" onchange="updateProgress()">
@@ -735,7 +735,7 @@ HTML_TEMPLATE = '''
                     <div class="toggle-item">
                         <span class="toggle-label">System Design Studied</span>
                         <div class="toggle-right">
-                            <input type="number" class="hour-input" id="sysdesign_hours" min="0" max="24" step="0.5" value="0">
+                            <input type="number" class="hour-input" id="sysdesign_hours" min="0" max="24" step="0.5" value="0" autocomplete="off">
                             <span class="hour-label">hrs</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="sysdesign_studied" onchange="updateProgress()">
@@ -889,11 +889,36 @@ HTML_TEMPLATE = '''
             // Clear old device ID if exists (not needed anymore)
             localStorage.removeItem('ajanDeviceId');
             
+            // Clear localStorage cache completely - force fresh load
+            localStorage.removeItem('ajanTrackerData');
+            console.log('🧹 Cleared localStorage cache');
+            
+            // Clear any stale data - Supabase is the source of truth
+            trackerData = {entries: []};
+            console.log('🔄 Reset trackerData to empty');
+            
+            // IMPORTANT: Reset all UI inputs to prevent browser autocomplete
+            resetAllInputs();
+            
             // Show loading
             showLoading(true);
             
             // Load data from Supabase first
             loadData();
+        }
+
+        function resetAllInputs() {
+            // Reset all toggles to OFF
+            toggleKeys.forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.checked = false;
+            });
+            // Reset all hour inputs to 0
+            hourKeys.forEach(key => {
+                const el = document.getElementById(key);
+                if (el) el.value = 0;
+            });
+            console.log('🔄 Reset all UI inputs to defaults');
         }
 
         function showLoading(show) {
@@ -909,10 +934,30 @@ HTML_TEMPLATE = '''
             // Fetch from Supabase first (source of truth)
             fetchFromSupabase().then(() => {
                 // Update UI after fetch completes
-                const today = new Date().toISOString().split('T')[0];
+                // Use a fresh Date object to get current date
+                const now = new Date();
+                const today = now.getFullYear() + '-' + 
+                              String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                              String(now.getDate()).padStart(2, '0');
+                console.log('📅 Today is:', today, '(from fresh Date())');
+                console.log('📊 All entries:', trackerData.entries.map(e => e.date));
+                
                 const todayEntry = trackerData.entries.find(e => e.date === today);
+                console.log('🔍 Today entry found:', todayEntry ? 'YES' : 'NO');
+                
+                // ALWAYS reset first, then load if exists
+                toggleKeys.forEach(key => {
+                    const el = document.getElementById(key);
+                    if (el) el.checked = false;
+                });
+                hourKeys.forEach(key => {
+                    const el = document.getElementById(key);
+                    if (el) el.value = 0;
+                });
                 
                 if (todayEntry) {
+                    console.log('✅ Loading today data:', todayEntry);
+                    // Load today's data
                     toggleKeys.forEach(key => {
                         const el = document.getElementById(key);
                         if (el) el.checked = todayEntry[key] || false;
@@ -921,6 +966,8 @@ HTML_TEMPLATE = '''
                         const el = document.getElementById(key);
                         if (el) el.value = todayEntry[key] || 0;
                     });
+                } else {
+                    console.log('📭 No data for today - UI stays at defaults');
                 }
                 
                 updateProgress();
@@ -935,10 +982,13 @@ HTML_TEMPLATE = '''
             syncBtn.classList.add('syncing');
             
             fetchFromSupabase().then(() => {
-                const today = new Date().toISOString().split('T')[0];
+                // Use local date (not UTC)
+                const now = new Date();
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                 const todayEntry = trackerData.entries.find(e => e.date === today);
                 
                 if (todayEntry) {
+                    // Load today's data
                     toggleKeys.forEach(key => {
                         const el = document.getElementById(key);
                         if (el) el.checked = todayEntry[key] || false;
@@ -946,6 +996,16 @@ HTML_TEMPLATE = '''
                     hourKeys.forEach(key => {
                         const el = document.getElementById(key);
                         if (el) el.value = todayEntry[key] || 0;
+                    });
+                } else {
+                    // No data for today - reset to defaults
+                    toggleKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.checked = false;
+                    });
+                    hourKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.value = 0;
                     });
                 }
                 
@@ -1023,12 +1083,9 @@ HTML_TEMPLATE = '''
                 })
                 .catch(e => {
                     console.error('❌ Error fetching from Supabase:', e);
-                    // Fall back to localStorage if Supabase fails
-                    const saved = localStorage.getItem('ajanTrackerData');
-                    if (saved) {
-                        trackerData = JSON.parse(saved);
-                        console.log('📱 Using cached data from localStorage');
-                    }
+                    console.log('⚠️ Working offline - no cached data available');
+                    // Don't fall back to localStorage - we cleared it intentionally
+                    trackerData.entries = [];
                     resolve();
                 });
             });
@@ -1042,7 +1099,9 @@ HTML_TEMPLATE = '''
         }
 
         function syncWithSupabase() {
-            const today = new Date().toISOString().split('T')[0];
+            // Use local date (not UTC)
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const todayEntry = trackerData.entries.find(e => e.date === today);
             
             if (!todayEntry) {
@@ -1153,7 +1212,9 @@ HTML_TEMPLATE = '''
         }
 
         function saveEntry() {
-            const today = new Date().toISOString().split('T')[0];
+            // Use local date (not UTC)
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const entry = { date: today, progress: calculateProgress() };
             
             toggleKeys.forEach(key => {
@@ -1219,7 +1280,8 @@ HTML_TEMPLATE = '''
             for (let i = 27; i >= 0; i--) {
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
+                // Use local date (not UTC) to match saved entries
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 const entry = entries.find(e => e.date === dateStr);
                 
                 const div = document.createElement('div');
