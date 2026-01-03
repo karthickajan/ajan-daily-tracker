@@ -698,17 +698,15 @@ HTML_TEMPLATE = '''
         }
         
         function initializeApp() {
-            // Load data from localStorage and Supabase
+            // Clear old device ID if exists (not needed anymore)
+            localStorage.removeItem('ajanDeviceId');
+            
+            // Load data from Supabase first
             loadData();
         }
 
         function loadData() {
-            const saved = localStorage.getItem('ajanTrackerData');
-            if (saved) {
-                trackerData = JSON.parse(saved);
-            }
-            
-            // Fetch all data from Supabase for this device (async)
+            // Fetch from Supabase first (source of truth)
             fetchFromSupabase().then(() => {
                 // Update UI after fetch completes
                 const today = new Date().toISOString().split('T')[0];
@@ -733,9 +731,8 @@ HTML_TEMPLATE = '''
 
         function fetchFromSupabase() {
             return new Promise((resolve) => {
-                console.log('Fetching all entries from Supabase');
+                console.log('📡 Fetching from Supabase...');
                 
-                // Fetch ALL entries from Supabase (no device_id filter)
                 fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?order=date.desc`, {
                     method: 'GET',
                     headers: {
@@ -744,39 +741,53 @@ HTML_TEMPLATE = '''
                         'Authorization': `Bearer ${SUPABASE_API_KEY}`
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    console.log('Supabase response:', data);
-                    if (data && data.length > 0) {
-                        console.log('Found', data.length, 'entries from Supabase');
+                    console.log('📦 Supabase response:', data);
+                    if (Array.isArray(data) && data.length > 0) {
+                        console.log('✅ Found', data.length, 'entries from Supabase');
                         // Replace all entries with Supabase data
                         trackerData.entries = data.map(row => ({
                             date: row.date,
-                            sleep_6h: row.sleep_6h,
-                            sleep_hours: row.sleep_hours,
-                            bathed: row.bathed,
-                            hair_controlled: row.hair_controlled,
-                            ate_enough: row.ate_enough,
-                            protein_ok: row.protein_ok,
-                            dsa_studied: row.dsa_studied,
-                            dsa_hours: row.dsa_hours,
-                            sysdesign_studied: row.sysdesign_studied,
-                            sysdesign_hours: row.sysdesign_hours,
-                            deepwork_90min: row.deepwork_90min,
-                            solved_designed: row.solved_designed,
-                            low_distraction: row.low_distraction,
-                            progress: row.progress
+                            sleep_6h: row.sleep_6h || false,
+                            sleep_hours: row.sleep_hours || 0,
+                            bathed: row.bathed || false,
+                            hair_controlled: row.hair_controlled || false,
+                            ate_enough: row.ate_enough || false,
+                            protein_ok: row.protein_ok || false,
+                            dsa_studied: row.dsa_studied || false,
+                            dsa_hours: row.dsa_hours || 0,
+                            sysdesign_studied: row.sysdesign_studied || false,
+                            sysdesign_hours: row.sysdesign_hours || 0,
+                            deepwork_90min: row.deepwork_90min || false,
+                            solved_designed: row.solved_designed || false,
+                            low_distraction: row.low_distraction || false,
+                            progress: row.progress || 0
                         }));
-                        // Save synced data to localStorage
+                        // Cache to localStorage for offline use
                         localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
-                        console.log('✅ Synced', trackerData.entries.length, 'entries to localStorage');
+                    } else if (Array.isArray(data) && data.length === 0) {
+                        console.log('📭 No entries in Supabase yet');
+                        trackerData.entries = [];
+                        localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
                     } else {
-                        console.log('No entries found in Supabase');
+                        console.error('❌ Unexpected response:', data);
                     }
                     resolve();
                 })
                 .catch(e => {
-                    console.error('Error fetching from Supabase:', e);
+                    console.error('❌ Error fetching from Supabase:', e);
+                    // Fall back to localStorage if Supabase fails
+                    const saved = localStorage.getItem('ajanTrackerData');
+                    if (saved) {
+                        trackerData = JSON.parse(saved);
+                        console.log('📱 Using cached data from localStorage');
+                    }
                     resolve();
                 });
             });
