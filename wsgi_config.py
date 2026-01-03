@@ -17,6 +17,17 @@ HTML_TEMPLATE = '''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✨ Ajan Daily Tracker</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ajan Tracker">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -57,6 +68,61 @@ HTML_TEMPLATE = '''
             padding: 2rem;
         }
 
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Card Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+
         /* Header */
         .header {
             display: flex;
@@ -65,6 +131,7 @@ HTML_TEMPLATE = '''
             margin-bottom: 2.5rem;
             flex-wrap: wrap;
             gap: 1.5rem;
+            animation: fadeInUp 0.5s ease forwards;
         }
 
         .header-left h1 {
@@ -80,6 +147,42 @@ HTML_TEMPLATE = '''
         .header-left p {
             color: var(--text-secondary);
             font-size: 1rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sync-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sync-btn svg {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .sync-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .sync-btn.syncing svg {
+            animation: spin 1s linear infinite;
         }
 
         .date-badge {
@@ -397,11 +500,25 @@ HTML_TEMPLATE = '''
             margin-top: 1.5rem;
         }
 
+        .history-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-header span {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
         .history-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 0.5rem;
-            margin-top: 1rem;
         }
 
         .history-day {
@@ -414,6 +531,7 @@ HTML_TEMPLATE = '''
             font-weight: 600;
             cursor: default;
             transition: all 0.2s ease;
+            position: relative;
         }
 
         .history-day.empty {
@@ -435,7 +553,35 @@ HTML_TEMPLATE = '''
         }
 
         .history-day:hover {
-            transform: scale(1.1);
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        /* Tooltip */
+        .history-day:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            border: 1px solid var(--border);
+            margin-bottom: 0.5rem;
+            z-index: 100;
+        }
+
+        /* Last synced */
+        .last-synced {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            opacity: 0.7;
         }
 
         /* Responsive */
@@ -455,10 +601,20 @@ HTML_TEMPLATE = '''
             .btn {
                 justify-content: center;
             }
+
+            .header-right {
+                width: 100%;
+                justify-content: space-between;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -466,9 +622,16 @@ HTML_TEMPLATE = '''
                 <h1>Ajan Daily Tracker</h1>
                 <p>Track your daily habits and become the best version of yourself</p>
             </div>
-            <div class="date-badge">
-                <div class="day" id="current-day">Saturday</div>
-                <div class="date" id="current-date">03 January 2026</div>
+            <div class="header-right">
+                <button class="sync-btn" id="sync-btn" onclick="manualSync()" title="Sync with cloud">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+                <div class="date-badge">
+                    <div class="day" id="current-day">Saturday</div>
+                    <div class="date" id="current-date">03 January 2026</div>
+                </div>
             </div>
         </header>
 
@@ -610,9 +773,13 @@ HTML_TEMPLATE = '''
                 <!-- History -->
                 <div class="card history-card">
                     <h2 class="card-title"><span class="icon">📅</span> Last 28 Days</h2>
+                    <div class="history-header">
+                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                    </div>
                     <div class="history-grid" id="history-grid">
                         <!-- Filled by JS -->
                     </div>
+                    <div class="last-synced" id="last-synced">Last synced: --</div>
                 </div>
             </div>
 
@@ -675,6 +842,7 @@ HTML_TEMPLATE = '''
         // Data storage
         let trackerData = {entries: []};
         let isLoading = true;
+        let lastSyncTime = null;
         
         const toggleKeys = ['sleep_6h', 'bathed', 'hair_controlled', 'ate_enough', 'protein_ok', 
                            'dsa_studied', 'sysdesign_studied', 'deepwork_90min', 'solved_designed', 'low_distraction'];
@@ -701,8 +869,20 @@ HTML_TEMPLATE = '''
             // Clear old device ID if exists (not needed anymore)
             localStorage.removeItem('ajanDeviceId');
             
+            // Show loading
+            showLoading(true);
+            
             // Load data from Supabase first
             loadData();
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
         }
 
         function loadData() {
@@ -726,7 +906,46 @@ HTML_TEMPLATE = '''
                 updateProgress();
                 updateStats();
                 renderHistory();
+                showLoading(false);
             });
+        }
+
+        function manualSync() {
+            const syncBtn = document.getElementById('sync-btn');
+            syncBtn.classList.add('syncing');
+            
+            fetchFromSupabase().then(() => {
+                const today = new Date().toISOString().split('T')[0];
+                const todayEntry = trackerData.entries.find(e => e.date === today);
+                
+                if (todayEntry) {
+                    toggleKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.checked = todayEntry[key] || false;
+                    });
+                    hourKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.value = todayEntry[key] || 0;
+                    });
+                }
+                
+                updateProgress();
+                updateStats();
+                renderHistory();
+                syncBtn.classList.remove('syncing');
+                showToast('🔄 Synced with cloud!');
+            }).catch(() => {
+                syncBtn.classList.remove('syncing');
+                showToast('❌ Sync failed');
+            });
+        }
+
+        function updateLastSynced() {
+            lastSyncTime = new Date();
+            const el = document.getElementById('last-synced');
+            if (el) {
+                el.textContent = `Last synced: ${lastSyncTime.toLocaleTimeString()}`;
+            }
         }
 
         function fetchFromSupabase() {
@@ -771,10 +990,12 @@ HTML_TEMPLATE = '''
                         }));
                         // Cache to localStorage for offline use
                         localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
+                        updateLastSynced();
                     } else if (Array.isArray(data) && data.length === 0) {
                         console.log('📭 No entries in Supabase yet');
                         trackerData.entries = [];
                         localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
+                        updateLastSynced();
                     } else {
                         console.error('❌ Unexpected response:', data);
                     }
@@ -972,6 +1193,8 @@ HTML_TEMPLATE = '''
             
             const today = new Date();
             const entries = trackerData.entries;
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             
             for (let i = 27; i >= 0; i--) {
                 const d = new Date(today);
@@ -982,6 +1205,10 @@ HTML_TEMPLATE = '''
                 const div = document.createElement('div');
                 div.className = 'history-day';
                 
+                const dayName = dayNames[d.getDay()];
+                const monthName = monthNames[d.getMonth()];
+                const dateNum = d.getDate();
+                
                 if (entry) {
                     const progress = entry.progress || 0;
                     if (progress >= 80) {
@@ -991,11 +1218,12 @@ HTML_TEMPLATE = '''
                     } else {
                         div.className += ' low';
                     }
-                    div.textContent = d.getDate();
-                    div.title = `${dateStr}: ${Math.round(progress)}%`;
+                    div.textContent = dateNum;
+                    div.setAttribute('data-tooltip', `${dayName}, ${monthName} ${dateNum}: ${Math.round(progress)}%`);
                 } else {
                     div.className += ' empty';
-                    div.textContent = d.getDate();
+                    div.textContent = dateNum;
+                    div.setAttribute('data-tooltip', `${dayName}, ${monthName} ${dateNum}: No data`);
                 }
                 
                 grid.appendChild(div);
