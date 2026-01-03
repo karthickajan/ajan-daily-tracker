@@ -804,45 +804,63 @@ HTML_TEMPLATE = '''
             const today = new Date().toISOString().split('T')[0];
             const todayEntry = trackerData.entries.find(e => e.date === today);
             
-            if (!todayEntry) return;
+            if (!todayEntry) {
+                console.log('No entry for today to sync');
+                return;
+            }
             
-            // Prepare data for Supabase
+            // Prepare data for Supabase - ensure all values have defaults
             const data = {
                 date: today,
-                sleep_6h: todayEntry.sleep_6h,
-                sleep_hours: todayEntry.sleep_hours,
-                bathed: todayEntry.bathed,
-                hair_controlled: todayEntry.hair_controlled,
-                ate_enough: todayEntry.ate_enough,
-                protein_ok: todayEntry.protein_ok,
-                dsa_studied: todayEntry.dsa_studied,
-                dsa_hours: todayEntry.dsa_hours,
-                sysdesign_studied: todayEntry.sysdesign_studied,
-                sysdesign_hours: todayEntry.sysdesign_hours,
-                deepwork_90min: todayEntry.deepwork_90min,
-                solved_designed: todayEntry.solved_designed,
-                low_distraction: todayEntry.low_distraction,
-                progress: todayEntry.progress || 0
+                sleep_6h: Boolean(todayEntry.sleep_6h),
+                sleep_hours: Number(todayEntry.sleep_hours) || 0,
+                bathed: Boolean(todayEntry.bathed),
+                hair_controlled: Boolean(todayEntry.hair_controlled),
+                ate_enough: Boolean(todayEntry.ate_enough),
+                protein_ok: Boolean(todayEntry.protein_ok),
+                dsa_studied: Boolean(todayEntry.dsa_studied),
+                dsa_hours: Number(todayEntry.dsa_hours) || 0,
+                sysdesign_studied: Boolean(todayEntry.sysdesign_studied),
+                sysdesign_hours: Number(todayEntry.sysdesign_hours) || 0,
+                deepwork_90min: Boolean(todayEntry.deepwork_90min),
+                solved_designed: Boolean(todayEntry.solved_designed),
+                low_distraction: Boolean(todayEntry.low_distraction),
+                progress: Number(todayEntry.progress) || 0
             };
             
-            console.log('📤 Sending to Supabase:', data);
+            console.log('📤 Sending to Supabase:', JSON.stringify(data));
             
-            // Use UPSERT: Insert if new, Update if exists (based on date)
-            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?on_conflict=date`, {
+            // Simple POST - let Supabase handle insert
+            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'apikey': SUPABASE_API_KEY,
                     'Authorization': `Bearer ${SUPABASE_API_KEY}`,
-                    'Prefer': 'resolution=merge-duplicates'
+                    'Prefer': 'return=minimal'
                 },
                 body: JSON.stringify(data)
             })
             .then(response => {
-                if (response.ok) {
-                    console.log('✅ Synced to Supabase');
+                if (response.ok || response.status === 201) {
+                    console.log('✅ Saved to Supabase');
+                } else if (response.status === 409) {
+                    // Conflict - entry exists, do update instead
+                    console.log('📝 Entry exists, updating...');
+                    return fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?date=eq.${today}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'apikey': SUPABASE_API_KEY,
+                            'Authorization': `Bearer ${SUPABASE_API_KEY}`
+                        },
+                        body: JSON.stringify(data)
+                    }).then(r => {
+                        if (r.ok) console.log('✅ Updated in Supabase');
+                        else r.text().then(t => console.error('❌ Update error:', t));
+                    });
                 } else {
-                    response.text().then(text => console.error('❌ Supabase error:', text));
+                    response.text().then(text => console.error('❌ Supabase error:', response.status, text));
                 }
             })
             .catch(e => console.error('❌ Sync error:', e));
