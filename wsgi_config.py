@@ -667,9 +667,6 @@ HTML_TEMPLATE = '''
     <!-- Toast -->
     <div class="toast" id="toast">✅ Saved successfully!</div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
-    
     <script>
         // Supabase Configuration
         const SUPABASE_URL = 'https://suxszrvczmdfajekqyrw.supabase.co';
@@ -720,66 +717,84 @@ HTML_TEMPLATE = '''
                 trackerData = JSON.parse(saved);
             }
             
-            // Fetch all data from Supabase for this device
-            fetchFromSupabase();
-            
-            // Load today's entry if exists
-            const today = new Date().toISOString().split('T')[0];
-            const todayEntry = trackerData.entries.find(e => e.date === today);
-            
-            if (todayEntry) {
-                toggleKeys.forEach(key => {
-                    const el = document.getElementById(key);
-                    if (el) el.checked = todayEntry[key] || false;
-                });
-                hourKeys.forEach(key => {
-                    const el = document.getElementById(key);
-                    if (el) el.value = todayEntry[key] || 0;
-                });
-            }
-            
-            updateProgress();
-            updateStats();
-            renderHistory();
+            // Fetch all data from Supabase for this device (async)
+            fetchFromSupabase().then(() => {
+                // Update UI after fetch completes
+                const today = new Date().toISOString().split('T')[0];
+                const todayEntry = trackerData.entries.find(e => e.date === today);
+                
+                if (todayEntry) {
+                    toggleKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.checked = todayEntry[key] || false;
+                    });
+                    hourKeys.forEach(key => {
+                        const el = document.getElementById(key);
+                        if (el) el.value = todayEntry[key] || 0;
+                    });
+                }
+                
+                updateProgress();
+                updateStats();
+                renderHistory();
+            });
         }
 
         function fetchFromSupabase() {
-            // Fetch all entries from Supabase for this device
-            fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?device_id=eq.${userId}&order=date.desc`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': SUPABASE_API_KEY,
-                    'Authorization': `Bearer ${SUPABASE_API_KEY}`
+            return new Promise((resolve) => {
+                // Make sure userId is set
+                if (!userId) {
+                    console.log('User ID not set yet');
+                    resolve();
+                    return;
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.length > 0) {
-                    // Clear existing entries and replace with Supabase data
-                    trackerData.entries = data.map(row => ({
-                        date: row.date,
-                        sleep_6h: row.sleep_6h,
-                        sleep_hours: row.sleep_hours,
-                        bathed: row.bathed,
-                        hair_controlled: row.hair_controlled,
-                        ate_enough: row.ate_enough,
-                        protein_ok: row.protein_ok,
-                        dsa_studied: row.dsa_studied,
-                        dsa_hours: row.dsa_hours,
-                        sysdesign_studied: row.sysdesign_studied,
-                        sysdesign_hours: row.sysdesign_hours,
-                        deepwork_90min: row.deepwork_90min,
-                        solved_designed: row.solved_designed,
-                        low_distraction: row.low_distraction,
-                        progress: row.progress
-                    }));
-                    // Save synced data to localStorage
-                    localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
-                }
-            })
-            .catch(e => {
-                console.log('Failed to fetch from Supabase, using local data');
+                
+                console.log('Fetching from Supabase for device:', userId);
+                
+                // Fetch all entries from Supabase for this device
+                fetch(`${SUPABASE_URL}/rest/v1/tracker_entries?device_id=eq.${userId}&order=date.desc`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_API_KEY,
+                        'Authorization': `Bearer ${SUPABASE_API_KEY}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Supabase response:', data);
+                    if (data && data.length > 0) {
+                        console.log('Found', data.length, 'entries from Supabase');
+                        // Clear existing entries and replace with Supabase data
+                        trackerData.entries = data.map(row => ({
+                            date: row.date,
+                            sleep_6h: row.sleep_6h,
+                            sleep_hours: row.sleep_hours,
+                            bathed: row.bathed,
+                            hair_controlled: row.hair_controlled,
+                            ate_enough: row.ate_enough,
+                            protein_ok: row.protein_ok,
+                            dsa_studied: row.dsa_studied,
+                            dsa_hours: row.dsa_hours,
+                            sysdesign_studied: row.sysdesign_studied,
+                            sysdesign_hours: row.sysdesign_hours,
+                            deepwork_90min: row.deepwork_90min,
+                            solved_designed: row.solved_designed,
+                            low_distraction: row.low_distraction,
+                            progress: row.progress
+                        }));
+                        // Save synced data to localStorage
+                        localStorage.setItem('ajanTrackerData', JSON.stringify(trackerData));
+                        console.log('Synced', trackerData.entries.length, 'entries from Supabase to localStorage');
+                    } else {
+                        console.log('No entries found in Supabase for this device');
+                    }
+                    resolve();
+                })
+                .catch(e => {
+                    console.error('Error fetching from Supabase:', e);
+                    resolve();
+                });
             });
         }
 
