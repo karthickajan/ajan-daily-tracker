@@ -732,15 +732,27 @@ HTML_TEMPLATE = '''
             initializeSupabase();
         });
 
-        function updateDate() {
+        // Helper function to get current IST date
+        function getISTDate() {
             const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const ist = new Date(utc + (5.5 * 3600000)); // 5.5 hours in milliseconds
+            return ist.toISOString().split('T')[0];
+        }
+
+        function updateDate() {
+            // Get current UTC time and convert to IST (UTC+5:30)
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const ist = new Date(utc + (5.5 * 3600000)); // 5.5 hours in milliseconds
+            
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                           'July', 'August', 'September', 'October', 'November', 'December'];
             
-            document.getElementById('current-day').textContent = days[now.getDay()];
+            document.getElementById('current-day').textContent = days[ist.getDay()];
             document.getElementById('current-date').textContent = 
-                `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()}`;
+                `${String(ist.getDate()).padStart(2, '0')} ${months[ist.getMonth()]} ${ist.getFullYear()}`;
         }
 
         async function initializeSupabase() {
@@ -798,7 +810,7 @@ HTML_TEMPLATE = '''
 
         function loadData() {
             // Load today's entry if exists
-            const today = new Date().toISOString().split('T')[0];
+            const today = getISTDate();
             const todayEntry = trackerData.entries.find(e => e.date === today);
             
             if (todayEntry) {
@@ -933,7 +945,7 @@ HTML_TEMPLATE = '''
         }
 
         function saveEntry() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getISTDate();
             const entry = { date: today, progress: calculateProgress() };
             
             toggleKeys.forEach(key => {
